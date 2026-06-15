@@ -1,0 +1,1189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>CCF Attendance</title>
+  <meta name="theme-color" content="#C8102E" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="CCF" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --red:#C8102E; --red-dark:#A00D24; --red-dim:rgba(200,16,46,0.08);
+      --white:#FFFFFF; --snow:#FDF9F9; --border:#F0E8E9;
+      --grey-1:#F5F5F5; --grey-2:#E0E0E0; --grey-3:#9E9E9E; --grey-4:#616161; --grey-5:#212121;
+      --green:#16A34A; --green-bg:#DCFCE7; --amber:#D97706; --amber-bg:#FEF3C7;
+      --r:14px; --r-sm:10px; --sh:0 2px 16px rgba(0,0,0,0.07); --sh-red:0 4px 20px rgba(200,16,46,0.22);
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    html,body{height:100%;font-family:'Inter',sans-serif;background:var(--snow);color:var(--grey-5);-webkit-font-smoothing:antialiased;overflow-x:hidden;}
+    button{cursor:pointer;border:none;font-family:inherit;-webkit-tap-highlight-color:transparent;}
+    input,select,textarea{font-family:inherit;font-size:16px;-webkit-appearance:none;appearance:none;}
+    .screen{display:none;min-height:100dvh;flex-direction:column;}
+    .screen.active{display:flex;}
+    #toast{position:fixed;bottom:calc(28px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%) translateY(70px);background:var(--grey-5);color:#fff;padding:11px 22px;border-radius:100px;font-size:13px;font-weight:500;transition:transform .3s cubic-bezier(.34,1.56,.64,1);z-index:9999;pointer-events:none;white-space:nowrap;max-width:92vw;text-align:center;}
+    #toast.show{transform:translateX(-50%) translateY(0);}
+    #toast.ok{background:var(--green);}
+    #toast.err{background:var(--red);}
+    #loadingOverlay{position:fixed;inset:0;background:var(--red);display:flex;align-items:center;justify-content:center;z-index:99999;flex-direction:column;gap:16px;}
+    #loadingOverlay .spin{width:36px;height:36px;border:3px solid rgba(255,255,255,.3);border-top-color:white;border-radius:50%;animation:spin .7s linear infinite;}
+    #loadingOverlay p{color:white;font-size:13px;opacity:.8;font-family:'Montserrat',sans-serif;font-weight:600;letter-spacing:1px;}
+    @keyframes spin{to{transform:rotate(360deg);}}
+    .auth-bg{flex:1;display:flex;align-items:center;justify-content:center;padding:24px 16px;background:var(--red);min-height:100dvh;}
+    .auth-card{background:var(--white);border-radius:20px;width:100%;max-width:400px;overflow:hidden;box-shadow:0 16px 48px rgba(0,0,0,0.18);}
+    .auth-card-top{background:var(--red);padding:28px 24px 24px;text-align:center;}
+    .auth-wordmark{font-family:'Montserrat',sans-serif;font-weight:900;font-size:42px;letter-spacing:6px;color:var(--white);line-height:1;}
+    .auth-mantra{font-family:'Montserrat',sans-serif;font-size:10px;font-weight:600;letter-spacing:2.5px;text-transform:uppercase;color:rgba(255,255,255,0.65);margin-top:8px;}
+    .auth-card-body{padding:24px 20px 28px;}
+    .auth-heading{font-family:'Montserrat',sans-serif;font-size:15px;font-weight:700;color:var(--grey-5);margin-bottom:18px;}
+    .fg{margin-bottom:14px;}
+    .fg label{display:block;font-size:11px;font-weight:600;color:var(--grey-3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:5px;}
+    .fg input,.fg select,.fg textarea{width:100%;padding:13px 14px;border:1.5px solid var(--border);border-radius:var(--r-sm);font-size:16px;color:var(--grey-5);background:var(--snow);transition:border-color .2s;outline:none;}
+    .fg textarea{resize:vertical;min-height:80px;line-height:1.5;font-size:15px;}
+    .fg input:focus,.fg select:focus,.fg textarea:focus{border-color:var(--red);background:var(--white);}
+    .btn-red{display:block;width:100%;padding:15px;background:var(--red);color:var(--white);font-family:'Montserrat',sans-serif;font-size:14px;font-weight:700;letter-spacing:.5px;border-radius:var(--r-sm);transition:background .15s;margin-top:6px;text-align:center;border:none;}
+    .btn-red:active{background:var(--red-dark);}
+    .btn-red:disabled{background:var(--grey-2);color:var(--grey-3);cursor:not-allowed;}
+    .btn-ghost{display:block;width:100%;padding:13px;background:transparent;color:var(--grey-4);font-size:14px;font-weight:600;border:1.5px solid var(--border);border-radius:var(--r-sm);margin-top:10px;text-align:center;transition:border-color .2s;}
+    .btn-ghost:active{border-color:var(--red);color:var(--red);}
+    .auth-footer{text-align:center;margin-top:16px;font-size:13px;color:var(--grey-3);}
+    .auth-footer a{color:var(--red);font-weight:600;cursor:pointer;}
+    .auth-tabs{display:flex;gap:8px;margin-bottom:18px;}
+    .auth-tab{flex:1;padding:11px;text-align:center;font-size:13px;font-weight:700;border-radius:var(--r-sm);background:var(--grey-1);color:var(--grey-3);font-family:'Montserrat',sans-serif;transition:all .2s;border:none;}
+    .auth-tab.on{background:var(--red);color:var(--white);}
+    .nav{background:var(--red);color:var(--white);padding:calc(14px + env(safe-area-inset-top)) 16px 12px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:var(--sh-red);}
+    .nav-left{display:flex;align-items:center;gap:10px;min-width:0;}
+    .nav-brand{font-family:'Montserrat',sans-serif;font-weight:900;font-size:17px;letter-spacing:2px;color:var(--white);flex-shrink:0;}
+    .nav-divider{width:1px;height:22px;background:rgba(255,255,255,.25);flex-shrink:0;}
+    .nav-info{min-width:0;}
+    .nav-info h2{font-family:'Montserrat',sans-serif;font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .nav-info p{font-size:10px;opacity:.7;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .btn-signout{background:rgba(255,255,255,.15);color:var(--white);padding:7px 12px;border-radius:100px;font-size:11px;font-weight:600;flex-shrink:0;}
+    .btn-signout:active{background:rgba(255,255,255,.28);}
+    .body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px 14px calc(100px + env(safe-area-inset-bottom));}
+    @media(min-width:600px){.body{max-width:680px;margin:0 auto;}}
+    .card{background:var(--white);border-radius:var(--r);padding:14px;margin-bottom:12px;box-shadow:var(--sh);}
+    .card-label{font-size:11px;font-weight:600;color:var(--grey-3);text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:7px;}
+    .card select{width:100%;padding:11px 12px;border:1.5px solid var(--border);border-radius:var(--r-sm);font-size:15px;color:var(--grey-5);background:var(--snow);outline:none;}
+    .banner{background:var(--red);border-radius:var(--r);padding:18px;margin-bottom:12px;box-shadow:var(--sh-red);color:var(--white);}
+    .banner h3{font-family:'Montserrat',sans-serif;font-size:18px;font-weight:800;}
+    .banner p{font-size:12px;opacity:.75;margin-top:3px;}
+    .live-pill{display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,.18);border-radius:100px;padding:4px 11px;font-size:11px;font-weight:600;margin-top:10px;}
+    .dot{width:7px;height:7px;border-radius:50%;background:#4ADE80;animation:blink 1.5s infinite;}
+    @keyframes blink{0%,100%{opacity:1}50%{opacity:.35}}
+    .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px;}
+    .stat{background:var(--white);border-radius:var(--r-sm);padding:11px 6px;text-align:center;box-shadow:var(--sh);}
+    .stat-num{font-family:'Montserrat',sans-serif;font-size:22px;font-weight:900;color:var(--red);line-height:1;}
+    .stat-num.dim{color:var(--grey-2);}
+    .stat-lbl{font-size:9px;color:var(--grey-3);text-transform:uppercase;letter-spacing:.5px;margin-top:3px;}
+    .search{display:flex;align-items:center;gap:8px;background:var(--white);border:1.5px solid var(--border);border-radius:var(--r-sm);padding:11px 13px;margin-bottom:10px;}
+    .search svg{width:15px;height:15px;fill:var(--grey-3);flex-shrink:0;}
+    .search input{flex:1;border:none;background:transparent;font-size:15px;color:var(--grey-5);outline:none;}
+    .search input::placeholder{color:var(--grey-3);}
+    .lhdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+    .lhdr h4{font-family:'Montserrat',sans-serif;font-size:13px;font-weight:700;}
+    .lhdr span{font-size:11px;color:var(--grey-3);}
+    .mrow{background:var(--white);border-radius:var(--r-sm);display:flex;align-items:center;gap:10px;padding:11px 12px;margin-bottom:7px;box-shadow:0 1px 6px rgba(0,0,0,.05);}
+    .avatar{width:36px;height:36px;border-radius:50%;background:var(--grey-1);display:flex;align-items:center;justify-content:center;font-family:'Montserrat',sans-serif;font-weight:700;font-size:12px;color:var(--grey-4);flex-shrink:0;}
+    .avatar.on{background:rgba(200,16,46,.12);color:var(--red);}
+    .minfo{flex:1;min-width:0;}
+    .mname{font-size:14px;font-weight:600;}
+    .mstatus{font-size:11px;color:var(--grey-3);margin-top:1px;}
+    .tog{width:48px;height:26px;border-radius:100px;background:var(--grey-2);flex-shrink:0;position:relative;transition:background .22s;border:none;}
+    .tog.on{background:var(--green);}
+    .tog::after{content:'';position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:var(--white);box-shadow:0 1px 4px rgba(0,0,0,.18);transition:transform .22s cubic-bezier(.34,1.56,.64,1);}
+    .tog.on::after{transform:translateX(22px);}
+    .note-btn{background:var(--red-dim);color:var(--red);border:none;border-radius:6px;padding:6px 9px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;margin-right:4px;}
+    .note-btn.has-note{background:rgba(200,16,46,.18);}
+    .add-row{display:flex;gap:8px;margin-top:14px;}
+    .add-row input{flex:1;padding:12px 13px;border:1.5px solid var(--border);border-radius:var(--r-sm);font-size:15px;background:var(--white);color:var(--grey-5);outline:none;}
+    .add-row input:focus{border-color:var(--red);}
+    .btn-add{background:var(--red);color:var(--white);padding:12px 16px;border-radius:var(--r-sm);font-size:13px;font-weight:700;font-family:'Montserrat',sans-serif;white-space:nowrap;border:none;}
+    .btn-add:active{background:var(--red-dark);}
+    .fab{position:fixed;bottom:calc(16px + env(safe-area-inset-bottom));left:14px;right:14px;background:var(--red);color:var(--white);padding:16px;border-radius:var(--r-sm);font-family:'Montserrat',sans-serif;font-size:15px;font-weight:700;letter-spacing:.4px;box-shadow:var(--sh-red);transition:background .15s;text-align:center;border:none;z-index:50;}
+    .fab:active{background:var(--red-dark);}
+    .overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:999;padding:20px;}
+    .ocard{background:var(--white);border-radius:20px;padding:28px 20px;text-align:center;max-width:320px;width:100%;}
+    .ocard .icon{width:60px;height:60px;border-radius:50%;background:var(--green-bg);display:flex;align-items:center;justify-content:center;margin:0 auto 14px;}
+    .ocard .icon svg{width:30px;height:30px;fill:var(--green);}
+    .ocard h3{font-family:'Montserrat',sans-serif;font-size:18px;font-weight:800;margin-bottom:7px;}
+    .ocard p{font-size:13px;color:var(--grey-4);line-height:1.55;}
+    .note-modal{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:flex-end;justify-content:center;z-index:1000;}
+    .note-modal-card{background:var(--white);border-radius:20px 20px 0 0;padding:24px 18px calc(28px + env(safe-area-inset-bottom));width:100%;max-width:540px;}
+    .note-modal-card h3{font-family:'Montserrat',sans-serif;font-size:16px;font-weight:800;margin-bottom:4px;}
+    .note-modal-card p{font-size:12px;color:var(--grey-3);margin-bottom:14px;}
+    .tab-scroll-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin-bottom:14px;scrollbar-width:none;}
+    .tab-scroll-wrap::-webkit-scrollbar{display:none;}
+    .tabs{display:flex;background:var(--white);border-radius:var(--r-sm);padding:4px;box-shadow:var(--sh);min-width:max-content;width:100%;gap:2px;}
+    .tab{padding:9px 10px;text-align:center;font-size:11px;font-weight:700;color:var(--grey-3);border-radius:8px;transition:all .2s;background:transparent;font-family:'Montserrat',sans-serif;white-space:nowrap;border:none;flex:1;min-width:52px;}
+    .tab.on{background:var(--red);color:var(--white);}
+    .panel{display:none;}
+    .panel.on{display:block;}
+    .scard{background:var(--white);border-radius:var(--r);padding:14px;margin-bottom:12px;box-shadow:var(--sh);}
+    .scard-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+    .scard-title{font-family:'Montserrat',sans-serif;font-size:14px;font-weight:700;}
+    .badge{padding:3px 9px;border-radius:100px;font-size:11px;font-weight:700;}
+    .badge.g{background:var(--green-bg);color:var(--green);}
+    .badge.a{background:var(--amber-bg);color:var(--amber);}
+    .badge.r{background:rgba(200,16,46,.1);color:var(--red);}
+    .badge.p{background:var(--grey-1);color:var(--grey-3);}
+    .pbar{height:7px;background:var(--grey-1);border-radius:100px;overflow:hidden;margin-top:5px;}
+    .pfill{height:100%;border-radius:100px;transition:width .55s;}
+    .pfill.g{background:var(--green);}
+    .pfill.a{background:var(--amber);}
+    .pfill.r{background:var(--red);}
+    .plabels{display:flex;justify-content:space-between;font-size:11px;color:var(--grey-4);}
+    .sum-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;}
+    .sum-mini{background:var(--white);border-radius:var(--r-sm);padding:11px 6px;text-align:center;box-shadow:var(--sh);}
+    .sum-val{font-family:'Montserrat',sans-serif;font-size:20px;font-weight:900;color:var(--red);}
+    .sum-lbl{font-size:9px;color:var(--grey-3);text-transform:uppercase;letter-spacing:.5px;margin-top:2px;}
+    .chips{display:flex;gap:7px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:4px;margin-bottom:12px;scrollbar-width:none;}
+    .chips::-webkit-scrollbar{display:none;}
+    .chip{padding:7px 14px;border-radius:100px;font-size:12px;font-weight:600;background:var(--white);color:var(--grey-4);border:1.5px solid var(--border);white-space:nowrap;flex-shrink:0;cursor:pointer;}
+    .chip.on{background:var(--red);color:var(--white);border-color:var(--red);}
+    .htbl{width:100%;border-collapse:collapse;}
+    .htbl th{text-align:left;font-size:10px;font-weight:600;color:var(--grey-3);text-transform:uppercase;letter-spacing:.5px;padding:7px 8px;border-bottom:1px solid var(--border);}
+    .htbl td{padding:9px 8px;font-size:12px;border-bottom:1px solid var(--grey-1);}
+    .htbl tr:last-child td{border-bottom:none;}
+    .setup-section{background:var(--white);border-radius:var(--r);padding:14px;margin-bottom:12px;box-shadow:var(--sh);}
+    .setup-section h4{font-family:'Montserrat',sans-serif;font-size:11px;font-weight:700;color:var(--grey-3);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;}
+    .urow{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--grey-1);}
+    .urow:last-child{border-bottom:none;}
+    .uinfo{flex:1;}
+    .uname{font-size:13px;font-weight:600;}
+    .umeta{font-size:11px;color:var(--grey-3);}
+    .rbadge{padding:3px 9px;border-radius:100px;font-size:10px;font-weight:700;}
+    .rbadge.leader{background:var(--grey-1);color:var(--grey-4);}
+    .rbadge.member{background:var(--green-bg);color:var(--green);}
+    .unit-type-hd{font-family:'Montserrat',sans-serif;font-size:11px;font-weight:800;color:var(--grey-3);text-transform:uppercase;letter-spacing:1.2px;margin:16px 0 8px;padding-bottom:5px;border-bottom:1.5px solid var(--border);}
+    .rep-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--grey-1);font-size:12px;}
+    .rep-row:last-child{border-bottom:none;}
+    .rep-key{color:var(--grey-4);}
+    .rep-val{font-weight:700;color:var(--grey-5);}
+    .mem-hero{background:var(--red);padding:24px 18px 20px;color:var(--white);}
+    .mem-hero h2{font-family:'Montserrat',sans-serif;font-size:20px;font-weight:900;}
+    .mem-hero p{font-size:12px;opacity:.75;margin-top:4px;}
+    .mem-unit-badge{display:inline-block;background:rgba(255,255,255,.18);border-radius:100px;padding:5px 14px;font-size:12px;font-weight:700;margin-top:10px;}
+    .mem-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:14px 0;}
+    .mem-stat{background:var(--white);border-radius:var(--r-sm);padding:12px 8px;text-align:center;box-shadow:var(--sh);}
+    .mem-stat-val{font-family:'Montserrat',sans-serif;font-size:22px;font-weight:900;color:var(--red);line-height:1;}
+    .mem-stat-lbl{font-size:9px;color:var(--grey-3);text-transform:uppercase;letter-spacing:.5px;margin-top:3px;}
+    .att-row{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--grey-1);}
+    .att-row:last-child{border-bottom:none;}
+    .empty{text-align:center;padding:28px 16px;font-size:13px;color:var(--grey-3);}
+    .pdf-btn{display:flex;align-items:center;gap:7px;padding:10px 14px;border-radius:var(--r-sm);background:var(--grey-1);color:var(--grey-5);font-size:12px;font-weight:700;font-family:'Montserrat',sans-serif;border:none;cursor:pointer;flex:1;justify-content:center;}
+    .pdf-btn:active{background:var(--grey-2);}
+    .pdf-row{display:flex;gap:8px;margin-top:12px;}
+
+    /* ── PRINT STYLES ── */
+    @media print {
+      body * { visibility: hidden; }
+      #printArea, #printArea * { visibility: visible; }
+      #printArea {
+        position: fixed; inset: 0;
+        padding: 24px 32px;
+        font-family: 'Inter', sans-serif;
+        color: #111;
+        background: white;
+      }
+      .print-logo { font-family: 'Montserrat', sans-serif; font-size: 28px; font-weight: 900; letter-spacing: 4px; color: #C8102E; }
+      .print-mantra { font-size: 10px; color: #888; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 2px; }
+      .print-title { font-family: 'Montserrat', sans-serif; font-size: 18px; font-weight: 800; margin: 14px 0 4px; color: #111; }
+      .print-meta { font-size: 11px; color: #555; margin-bottom: 16px; }
+      .print-divider { border: none; border-top: 2px solid #C8102E; margin: 10px 0 16px; }
+      .print-stats { display: flex; gap: 24px; margin-bottom: 20px; }
+      .print-stat { text-align: center; }
+      .print-stat-val { font-family: 'Montserrat', sans-serif; font-size: 26px; font-weight: 900; color: #C8102E; line-height: 1; }
+      .print-stat-lbl { font-size: 9px; color: #888; text-transform: uppercase; letter-spacing: .5px; margin-top: 2px; }
+      .print-section-hd { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #888; border-bottom: 1px solid #eee; padding-bottom: 5px; margin: 14px 0 8px; }
+      .print-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+      .print-table th { text-align: left; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: #888; padding: 6px 8px; border-bottom: 1px solid #ddd; }
+      .print-table td { padding: 7px 8px; border-bottom: 1px solid #f0f0f0; }
+      .print-present { color: #16A34A; font-weight: 700; }
+      .print-absent { color: #C8102E; }
+      .print-footer { position: fixed; bottom: 24px; left: 32px; right: 32px; text-align: center; font-size: 10px; color: #aaa; border-top: 1px solid #eee; padding-top: 8px; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="loadingOverlay"><div class="spin"></div><p>LOADING…</p></div>
+<div id="toast"></div>
+<!-- Hidden print area -->
+<div id="printArea" style="display:none"></div>
+
+<!-- ══ LOGIN ══ -->
+<div id="sLogin" class="screen">
+  <div class="auth-bg">
+    <div class="auth-card">
+      <div class="auth-card-top">
+        <div class="auth-wordmark">CCF</div>
+        <div class="auth-mantra">Light to Our Generation</div>
+      </div>
+      <div class="auth-card-body">
+        <div class="auth-heading">Sign in to your account</div>
+        <div class="fg"><label>Username</label><input type="text" id="lUser" placeholder="Enter username" autocomplete="username" inputmode="text"/></div>
+        <div class="fg"><label>Password</label><input type="password" id="lPass" placeholder="Enter password" autocomplete="current-password"/></div>
+        <button class="btn-red" id="loginBtn" onclick="doLogin()">Sign In</button>
+        <div class="auth-footer">No account? <a onclick="show('sRegister')">Register here</a></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ REGISTER ══ -->
+<div id="sRegister" class="screen">
+  <div class="auth-bg">
+    <div class="auth-card">
+      <div class="auth-card-top">
+        <div class="auth-wordmark">CCF</div>
+        <div class="auth-mantra">Light to Our Generation</div>
+      </div>
+      <div class="auth-card-body">
+        <div class="auth-heading">Create an account</div>
+        <div class="auth-tabs">
+          <button class="auth-tab on" id="tabLeaderBtn" onclick="switchRegTab('leader')">Leader</button>
+          <button class="auth-tab"    id="tabMemberBtn" onclick="switchRegTab('member')">Member</button>
+        </div>
+        <div id="regLeaderFields">
+          <div class="fg"><label>Unit Type</label>
+            <select id="rUnitType"><option value="Hall">Hall</option><option value="Hostel">Hostel</option><option value="Department">Department</option></select>
+          </div>
+          <div class="fg"><label>Unit Name</label><input type="text" id="rUnit" placeholder="e.g. Unity Hall, Engineering Dept…"/></div>
+        </div>
+        <div id="regMemberFields" style="display:none">
+          <div class="fg"><label>Your Unit</label><select id="rMemberUnit"><option value="">Loading units…</option></select></div>
+        </div>
+        <div class="fg"><label>Full Name</label><input type="text" id="rName" placeholder="Your full name"/></div>
+        <div class="fg"><label>Username</label><input type="text" id="rUser" placeholder="Choose a username" autocomplete="username"/></div>
+        <div class="fg"><label>Password</label><input type="password" id="rPass" placeholder="Choose a password" autocomplete="new-password"/></div>
+        <button class="btn-red" id="registerBtn" onclick="doRegister()">Create Account</button>
+        <button class="btn-ghost" onclick="show('sLogin')">← Back to Sign In</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ LEADER ══ -->
+<div id="sLeader" class="screen">
+  <div class="nav">
+    <div class="nav-left">
+      <div class="nav-brand">CCF</div>
+      <div class="nav-divider"></div>
+      <div class="nav-info"><h2 id="lNavUnit">—</h2><p id="lNavName">Leader</p></div>
+    </div>
+    <button class="btn-signout" onclick="doLogout()">Sign Out</button>
+  </div>
+  <div class="body">
+    <div class="card">
+      <span class="card-label">Service</span>
+      <select id="svcSel">
+        <option value="s1">Sunday Service</option>
+        <option value="mw">Midweek Service</option>
+        <option value="pm">Prayer Meeting</option>
+        <option value="sp">Special Programme</option>
+      </select>
+    </div>
+    <div class="banner">
+      <h3 id="banUnit">—</h3><p id="banDate">—</p>
+      <div class="live-pill"><div class="dot"></div>Live Attendance</div>
+    </div>
+    <div class="stats">
+      <div class="stat"><div class="stat-num" id="sP">0</div><div class="stat-lbl">Present</div></div>
+      <div class="stat"><div class="stat-num dim" id="sA">0</div><div class="stat-lbl">Absent</div></div>
+      <div class="stat"><div class="stat-num" id="sT">0</div><div class="stat-lbl">Total</div></div>
+      <div class="stat"><div class="stat-num" id="sPct">0%</div><div class="stat-lbl">Rate</div></div>
+    </div>
+    <div class="search">
+      <svg viewBox="0 0 24 24"><path d="M10 2a8 8 0 105.29 13.71l4.5 4.5 1.42-1.42-4.5-4.5A8 8 0 0010 2zm0 2a6 6 0 110 12A6 6 0 0110 4z"/></svg>
+      <input type="text" id="mSearch" placeholder="Search members…" oninput="renderMembers()"/>
+    </div>
+    <div class="lhdr"><h4>Members</h4><span id="mCount"></span></div>
+    <div id="mList"></div>
+    <div class="add-row">
+      <input type="text" id="mNew" placeholder="Add member name…"/>
+      <button class="btn-add" onclick="addMember()">+ Add</button>
+    </div>
+    <!-- PDF export buttons -->
+    <div class="pdf-row">
+      <button class="pdf-btn" onclick="leaderPdfSession()">📄 PDF — This Session</button>
+      <button class="pdf-btn" onclick="leaderPdfAll()">📋 PDF — All Records</button>
+    </div>
+  </div>
+  <button class="fab" onclick="submitAtt()">✓ Submit Attendance</button>
+</div>
+
+<!-- Note Modal -->
+<div id="noteModal" class="note-modal" style="display:none" onclick="if(event.target===this)closeNoteModal()">
+  <div class="note-modal-card">
+    <h3 id="noteModalTitle">Member Note</h3>
+    <p>Notes are saved privately and only visible to you.</p>
+    <div class="fg"><label>Note</label><textarea id="noteText" placeholder="e.g. Follow up next week."></textarea></div>
+    <button class="btn-red" onclick="saveNote()">Save Note</button>
+    <button class="btn-ghost" onclick="closeNoteModal()">Cancel</button>
+  </div>
+</div>
+
+<!-- Submit overlay -->
+<div id="oSubmit" class="overlay" style="display:none">
+  <div class="ocard">
+    <div class="icon"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+    <h3>Submitted!</h3><p id="oMsg"></p>
+    <button class="btn-red" style="margin-top:16px" onclick="closeSubmit()">Done</button>
+  </div>
+</div>
+
+<!-- ══ MEMBER SCREEN ══ -->
+<div id="sMember" class="screen">
+  <div class="nav">
+    <div class="nav-left">
+      <div class="nav-brand">CCF</div>
+      <div class="nav-divider"></div>
+      <div class="nav-info"><h2 id="memNavUnit">—</h2><p id="memNavName">Member</p></div>
+    </div>
+    <button class="btn-signout" onclick="doLogout()">Sign Out</button>
+  </div>
+  <div class="body">
+    <div class="mem-hero">
+      <h2 id="memHeroName">Welcome</h2>
+      <p id="memHeroUnit">—</p>
+      <div class="mem-unit-badge" id="memUnitBadge">—</div>
+    </div>
+    <!-- Personal attendance summary stats -->
+    <div class="mem-stats">
+      <div class="mem-stat"><div class="mem-stat-val" id="memStatSessions">0</div><div class="mem-stat-lbl">Sessions</div></div>
+      <div class="mem-stat"><div class="mem-stat-val" id="memStatPresent">0</div><div class="mem-stat-lbl">Present</div></div>
+      <div class="mem-stat"><div class="mem-stat-val" id="memStatRate">—</div><div class="mem-stat-lbl">Rate</div></div>
+    </div>
+    <!-- Attendance history -->
+    <div class="scard">
+      <div class="scard-hd">
+        <div class="scard-title">My Attendance</div>
+        <span id="memAttBadge" style="font-size:11px;color:var(--grey-3)"></span>
+      </div>
+      <div id="memAttHistory"><div class="empty">No records yet.</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ ADMIN ══ -->
+<div id="sAdmin" class="screen">
+  <div class="nav">
+    <div class="nav-left">
+      <div class="nav-brand">CCF</div>
+      <div class="nav-divider"></div>
+      <div class="nav-info"><h2>Admin</h2><p id="aNavName">Dashboard</p></div>
+    </div>
+    <button class="btn-signout" onclick="doLogout()">Sign Out</button>
+  </div>
+  <div class="body">
+    <div class="tab-scroll-wrap">
+      <div class="tabs" id="adminTabs">
+        <button class="tab on"  onclick="switchTab('Overview')">Overview</button>
+        <button class="tab"     onclick="switchTab('Halls')">Halls</button>
+        <button class="tab"     onclick="switchTab('Hostels')">Hostels</button>
+        <button class="tab"     onclick="switchTab('Departments')">Depts</button>
+        <button class="tab"     onclick="switchTab('Reports')">Reports</button>
+        <button class="tab"     onclick="switchTab('History')">History</button>
+        <button class="tab"     onclick="switchTab('Setup')">Setup</button>
+      </div>
+    </div>
+
+    <!-- Overview -->
+    <div id="pOverview" class="panel on">
+      <div style="margin-bottom:12px">
+        <select id="aSvc" onchange="renderOverview()" style="width:100%;padding:11px 12px;border:1.5px solid var(--border);border-radius:var(--r-sm);font-size:15px;background:var(--white);outline:none;-webkit-appearance:none;">
+          <option value="s1">Sunday Service</option>
+          <option value="mw">Midweek Service</option>
+          <option value="pm">Prayer Meeting</option>
+          <option value="sp">Special Programme</option>
+        </select>
+      </div>
+      <div class="sum-grid" id="oSum"></div>
+      <div id="oCards"></div>
+    </div>
+
+    <div id="pHalls" class="panel"><div id="hCardsHall"><div class="empty">Loading…</div></div></div>
+    <div id="pHostels" class="panel"><div id="hCardsHostel"><div class="empty">Loading…</div></div></div>
+    <div id="pDepartments" class="panel"><div id="hCardsDepartment"><div class="empty">Loading…</div></div></div>
+
+    <!-- Reports -->
+    <div id="pReports" class="panel">
+      <div class="scard" style="margin-bottom:12px">
+        <div class="scard-hd" style="margin-bottom:10px"><div class="scard-title">Filter</div></div>
+        <div class="fg" style="margin-bottom:10px"><label>Unit</label><select id="repUnit" onchange="renderReports()"><option value="all">All Units (Church-wide)</option></select></div>
+        <div class="fg" style="margin-bottom:10px"><label>Service</label>
+          <select id="repSvc" onchange="renderReports()">
+            <option value="all">All Services</option>
+            <option value="s1">Sunday Service</option>
+            <option value="mw">Midweek Service</option>
+            <option value="pm">Prayer Meeting</option>
+            <option value="sp">Special Programme</option>
+          </select>
+        </div>
+        <!-- Admin PDF export -->
+        <div class="pdf-row">
+          <button class="pdf-btn" onclick="adminPdf()">📄 Export PDF Report</button>
+        </div>
+      </div>
+      <div id="repOut"></div>
+    </div>
+
+    <!-- History -->
+    <div id="pHistory" class="panel">
+      <div class="chips" id="hChips"></div>
+      <div class="scard" style="overflow-x:auto">
+        <table class="htbl">
+          <thead><tr><th>Date</th><th>Unit</th><th>Service</th><th>Present</th><th>Total</th><th>%</th></tr></thead>
+          <tbody id="hBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Setup -->
+    <div id="pSetup" class="panel">
+      <div class="setup-section"><h4>Leaders &amp; Members</h4><div id="uList"></div></div>
+      <div class="setup-section">
+        <h4>Change Admin Password</h4>
+        <div class="fg"><label>Current Password</label><input type="password" id="pwCur" placeholder="Current password"/></div>
+        <div class="fg"><label>New Password</label><input type="password" id="pwNew" placeholder="New password"/></div>
+        <div class="fg"><label>Confirm New Password</label><input type="password" id="pwCon" placeholder="Confirm password"/></div>
+        <button class="btn-red" onclick="changePwd()">Update Password</button>
+      </div>
+      <div class="setup-section" style="border:1.5px solid rgba(22,163,74,.25)">
+        <h4 style="color:var(--green)">Add a New Unit</h4>
+        <p style="font-size:12px;color:var(--grey-4);margin-bottom:12px">Creates the unit and its leader account in one step.</p>
+        <div class="fg"><label>Unit Type</label><select id="newUnitType"><option value="Hall">Hall</option><option value="Hostel">Hostel</option><option value="Department">Department</option></select></div>
+        <div class="fg"><label>Unit Name</label><input type="text" id="newUnitName" placeholder="e.g. Unity Hall"/></div>
+        <div class="fg"><label>Leader Full Name</label><input type="text" id="newUnitLeaderName" placeholder="Leader's name"/></div>
+        <div class="fg"><label>Leader Username</label><input type="text" id="newUnitLeaderUser" placeholder="Username"/></div>
+        <div class="fg"><label>Leader Password</label><input type="password" id="newUnitLeaderPass" placeholder="Password"/></div>
+        <button class="btn-red" style="background:var(--green)" onclick="addUnit()">+ Create Unit</button>
+      </div>
+      <div class="setup-section" style="border:1.5px solid rgba(200,16,46,.25)">
+        <h4 style="color:var(--red)">Remove a User</h4>
+        <div class="fg"><label>Select User</label><select id="delSel"></select></div>
+        <button class="btn-red" style="background:var(--grey-4)" onclick="removeUser()">Remove</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function show(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+  }
+</script>
+
+<script type="module">
+  import { initializeApp }           from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getFirestore, doc, getDoc, setDoc, collection, getDocs,
+           addDoc, deleteDoc, query, orderBy, where, updateDoc }
+    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey:"AIzaSyD8NFqxOjVNHFCgB2uzr7gyr28ho6eJYiU",
+    authDomain:"ccf-database-9966e.firebaseapp.com",
+    projectId:"ccf-database-9966e",
+    storageBucket:"ccf-database-9966e.firebasestorage.app",
+    messagingSenderId:"834572794978",
+    appId:"1:834572794978:web:d31ec4c9229801b473a53b"
+  };
+  const app = initializeApp(firebaseConfig);
+  const db  = getFirestore(app);
+
+  let CU = null, ATT = {}, NOTES = {}, noteTarget = null, regTab = 'leader';
+
+  // ── UTILS ──
+  function show(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); document.getElementById(id).classList.add('active'); }
+  window.show = show;
+  function v(id){ return document.getElementById(id).value.trim(); }
+  function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function fmtFull(d){ return d.toLocaleDateString('en-GB',{weekday:'long',year:'numeric',month:'long',day:'numeric'}); }
+  function fmtShort(s){ const d=new Date(s); return d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}); }
+  function rel(s){ const d=(Date.now()-new Date(s))/1000; return d<60?'just now':d<3600?Math.floor(d/60)+'m ago':d<86400?Math.floor(d/3600)+'h ago':Math.floor(d/86400)+'d ago'; }
+  function svcLbl(s){ return {s1:'Sunday Service',mw:'Midweek Service',pm:'Prayer Meeting',sp:'Special Programme'}[s]||s; }
+  function set(id,h){ const el=document.getElementById(id); if(!el)return; el[typeof h==='string'&&h.includes('<')?'innerHTML':'textContent']=h; }
+  let tTimer;
+  function toast(msg,type=''){ const el=document.getElementById('toast'); el.textContent=msg; el.className='show '+type; clearTimeout(tTimer); tTimer=setTimeout(()=>el.className='',3000); }
+  window.toast = toast;
+  function setLoading(on){ document.getElementById('loadingOverlay').style.display=on?'flex':'none'; }
+  function btnLoading(id,on,label=''){ const btn=document.getElementById(id); if(!btn)return; btn.disabled=on; btn.textContent=on?'Please wait…':label; }
+  function persist(){ localStorage.setItem('ccf_ses',JSON.stringify(CU)); }
+  function restore(){
+    try{
+      const s=localStorage.getItem('ccf_ses');
+      if(!s){setLoading(false);show('sLogin');return;}
+      CU=JSON.parse(s);
+      if(CU.role==='admin') showAdmin();
+      else if(CU.role==='member') showMember();
+      else showLeader();
+    }catch{setLoading(false);show('sLogin');}
+  }
+
+  // ── REGISTER TAB ──
+  window.switchRegTab = function(tab){
+    regTab=tab;
+    document.getElementById('tabLeaderBtn').classList.toggle('on',tab==='leader');
+    document.getElementById('tabMemberBtn').classList.toggle('on',tab==='member');
+    document.getElementById('regLeaderFields').style.display=tab==='leader'?'block':'none';
+    document.getElementById('regMemberFields').style.display=tab==='member'?'block':'none';
+    if(tab==='member') loadUnitsForRegister();
+  };
+  async function loadUnitsForRegister(){
+    try{
+      const snap=await getDocs(collection(db,'users'));
+      const units=[...new Set(snap.docs.map(d=>d.data().unit).filter(Boolean))].sort();
+      const sel=document.getElementById('rMemberUnit');
+      sel.innerHTML=units.length?units.map(u=>`<option value="${esc(u)}">${esc(u)}</option>`).join(''):'<option value="">No units yet</option>';
+    }catch(e){console.error(e);}
+  }
+
+  // ── AUTH ──
+  window.doLogin = async function(){
+    const u=v('lUser'),p=v('lPass');
+    if(!u||!p){toast('Enter username and password','err');return;}
+    btnLoading('loginBtn',true,'Sign In');
+    try{
+      const adminDoc=await getDoc(doc(db,'config','admin'));
+      if(adminDoc.exists()){
+        const a=adminDoc.data();
+        if(u===a.username&&p===a.password){
+          CU={username:a.username,name:a.name||'CCF Admin',role:'admin'};
+          persist();showAdmin();return;
+        }
+      }
+      const snap=await getDocs(query(collection(db,'users'),where('username','==',u)));
+      if(snap.empty){toast('Incorrect credentials','err');return;}
+      const ud=snap.docs[0].data();
+      if(ud.password!==p){toast('Incorrect credentials','err');return;}
+      CU={...ud,id:snap.docs[0].id};
+      persist();
+      if(CU.role==='member') showMember();
+      else showLeader();
+    }catch(e){toast('Connection error','err');console.error(e);}
+    finally{btnLoading('loginBtn',false,'Sign In');}
+  };
+
+  window.doRegister = async function(){
+    const name=v('rName'),user=v('rUser'),pass=v('rPass');
+    if(!name||!user||!pass){toast('Please fill all fields','err');return;}
+    btnLoading('registerBtn',true,'Create Account');
+    try{
+      const adminDoc=await getDoc(doc(db,'config','admin'));
+      if(adminDoc.exists()&&adminDoc.data().username===user){toast('Username already taken','err');return;}
+      const snap=await getDocs(query(collection(db,'users'),where('username','==',user)));
+      if(!snap.empty){toast('Username already taken','err');return;}
+      if(regTab==='leader'){
+        const unitType=document.getElementById('rUnitType').value;
+        const unit=v('rUnit');
+        if(!unit){toast('Enter your unit name','err');return;}
+        await addDoc(collection(db,'users'),{username:user,password:pass,name,unit,unitType,role:'leader'});
+      }else{
+        const unit=document.getElementById('rMemberUnit').value;
+        if(!unit){toast('Select your unit','err');return;}
+        await addDoc(collection(db,'users'),{username:user,password:pass,name,unit,role:'member'});
+      }
+      toast('Account created — sign in!','ok');
+      ['rUnit','rName','rUser','rPass'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+      show('sLogin');
+    }catch(e){toast('Registration failed','err');console.error(e);}
+    finally{btnLoading('registerBtn',false,'Create Account');}
+  };
+
+  window.doLogout = function(){
+    CU=null;NOTES={};
+    localStorage.removeItem('ccf_ses');
+    show('sLogin');
+    document.getElementById('lUser').value='';
+    document.getElementById('lPass').value='';
+  };
+
+  // ── LEADER ──
+  async function showLeader(){
+    show('sLeader');
+    set('lNavUnit',CU.unit); set('lNavName',CU.name);
+    set('banUnit',CU.unit); set('banDate',fmtFull(new Date()));
+    setLoading(false); ATT={};
+    try{
+      const snap=await getDocs(query(collection(db,'members'),where('unit','==',CU.unit)));
+      snap.forEach(d=>{ATT[d.data().name]=false;});
+      const usnap=await getDocs(query(collection(db,'users'),where('unit','==',CU.unit),where('role','==','member')));
+      usnap.forEach(d=>{if(!ATT.hasOwnProperty(d.data().name))ATT[d.data().name]=false;});
+      const notesSnap=await getDocs(query(collection(db,'notes'),where('unit','==',CU.unit)));
+      NOTES={};
+      notesSnap.forEach(d=>{const nd=d.data();NOTES[nd.member]={text:nd.text,docId:d.id};});
+    }catch(e){console.error(e);}
+    counts();renderMembers();
+  }
+
+  window.renderMembers = function(){
+    const q=document.getElementById('mSearch').value.toLowerCase();
+    const names=Object.keys(ATT).filter(n=>n.toLowerCase().includes(q));
+    set('mCount',names.length+' members');
+    const el=document.getElementById('mList');
+    if(!names.length){el.innerHTML='<div class="empty">No members yet — add one below.</div>';return;}
+    el.innerHTML=names.map(n=>{
+      const on=ATT[n];
+      const hasNote=!!(NOTES[n]&&NOTES[n].text);
+      const ini=n.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+      const safe=n.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+      return `<div class="mrow">
+        <div class="avatar ${on?'on':''}">${ini}</div>
+        <div class="minfo"><div class="mname">${esc(n)}</div><div class="mstatus">${on?'✅ Present':'—'}${hasNote?' · 📝':''}</div></div>
+        <button class="note-btn ${hasNote?'has-note':''}" onclick="openNoteModal('${safe}')">📝</button>
+        <button class="tog ${on?'on':''}" onclick="tog('${safe}')"></button>
+      </div>`;
+    }).join('');
+  };
+
+  window.tog=function(n){ATT[n]=!ATT[n];counts();renderMembers();};
+
+  function counts(){
+    const vals=Object.values(ATT);
+    const p=vals.filter(Boolean).length,t=vals.length;
+    set('sP',p);set('sA',t-p);set('sT',t);
+    set('sPct',t?Math.round(p/t*100)+'%':'0%');
+  }
+
+  window.addMember=async function(){
+    const el=document.getElementById('mNew');
+    const n=el.value.trim();
+    if(!n)return;
+    if(ATT.hasOwnProperty(n)){toast('Already in list','err');return;}
+    try{
+      await addDoc(collection(db,'members'),{name:n,unit:CU.unit});
+      ATT[n]=false;el.value='';
+      counts();renderMembers();toast(n+' added','ok');
+    }catch(e){toast('Failed to add member','err');console.error(e);}
+  };
+
+  window.submitAtt=async function(){
+    const svc=document.getElementById('svcSel').value;
+    const pr=Object.entries(ATT).filter(([,v])=>v).map(([k])=>k);
+    const t=Object.keys(ATT).length;
+    const pct=t?Math.round(pr.length/t*100):0;
+    try{
+      await addDoc(collection(db,'records'),{
+        unit:CU.unit,service:svc,date:new Date().toISOString(),
+        present:pr.length,absent:t-pr.length,total:t,pct,presentNames:pr,by:CU.username
+      });
+      set('oMsg',`${pr.length} of ${t} marked present (${pct}%) for ${svcLbl(svc)}.`);
+      document.getElementById('oSubmit').style.display='flex';
+    }catch(e){toast('Submit failed','err');console.error(e);}
+  };
+
+  window.closeSubmit=function(){ document.getElementById('oSubmit').style.display='none'; showLeader(); };
+
+  // ── LEADER PDF — THIS SESSION ──
+  window.leaderPdfSession = function(){
+    const svc=document.getElementById('svcSel').value;
+    const names=Object.keys(ATT);
+    if(!names.length){toast('No members loaded','err');return;}
+    const present=names.filter(n=>ATT[n]);
+    const absent=names.filter(n=>!ATT[n]);
+    const pct=names.length?Math.round(present.length/names.length*100):0;
+    const html=buildPrintHtml({
+      title:`Attendance Report — ${CU.unit}`,
+      subtitle:`${svcLbl(svc)} · ${fmtFull(new Date())}`,
+      stats:[
+        {val:names.length,lbl:'Total'},
+        {val:present.length,lbl:'Present'},
+        {val:absent.length,lbl:'Absent'},
+        {val:pct+'%',lbl:'Rate'}
+      ],
+      sections:[
+        {heading:'Present Members',rows:present.map((n,i)=>[i+1,n,'✓ Present']),cls:'print-present'},
+        {heading:'Absent Members',rows:absent.map((n,i)=>[i+1,n,'✗ Absent']),cls:'print-absent'}
+      ],
+      cols:['#','Name','Status'],
+      by:`Submitted by ${CU.name}`
+    });
+    triggerPrint(html);
+  };
+
+  // ── LEADER PDF — ALL RECORDS ──
+  window.leaderPdfAll = async function(){
+    try{
+      const snap=await getDocs(query(collection(db,'records'),where('unit','==',CU.unit),orderBy('date','desc')));
+      const records=snap.docs.map(d=>d.data());
+      if(!records.length){toast('No records yet','err');return;}
+      const totalSessions=records.length;
+      const avgPct=Math.round(records.reduce((a,r)=>a+r.pct,0)/totalSessions);
+      const totalPresent=records.reduce((a,r)=>a+r.present,0);
+      const totalMembers=records.reduce((a,r)=>a+r.total,0);
+      const html=buildPrintHtml({
+        title:`Full Attendance Report — ${CU.unit}`,
+        subtitle:`All services · Generated ${fmtFull(new Date())}`,
+        stats:[
+          {val:totalSessions,lbl:'Sessions'},
+          {val:totalPresent,lbl:'Total Present'},
+          {val:totalMembers,lbl:'Total Slots'},
+          {val:avgPct+'%',lbl:'Avg Rate'}
+        ],
+        sections:[{
+          heading:'Session History',
+          rows:records.map(r=>[fmtShort(r.date),svcLbl(r.service),r.present,r.total,r.pct+'%']),
+          cls:''
+        }],
+        cols:['Date','Service','Present','Total','Rate'],
+        by:`Report for ${CU.unit} · Exported by ${CU.name}`
+      });
+      triggerPrint(html);
+    }catch(e){toast('Failed to load records','err');console.error(e);}
+  };
+
+  // ── NOTES ──
+  window.openNoteModal=function(name){
+    noteTarget=name;
+    document.getElementById('noteModalTitle').textContent='Note — '+name;
+    document.getElementById('noteText').value=(NOTES[name]&&NOTES[name].text)||'';
+    document.getElementById('noteModal').style.display='flex';
+    setTimeout(()=>document.getElementById('noteText').focus(),150);
+  };
+  window.closeNoteModal=function(){ document.getElementById('noteModal').style.display='none'; noteTarget=null; };
+  window.saveNote=async function(){
+    if(!noteTarget)return;
+    const text=document.getElementById('noteText').value.trim();
+    try{
+      if(NOTES[noteTarget]&&NOTES[noteTarget].docId){
+        await updateDoc(doc(db,'notes',NOTES[noteTarget].docId),{text,updatedAt:new Date().toISOString()});
+        NOTES[noteTarget].text=text;
+      }else{
+        const ref=await addDoc(collection(db,'notes'),{member:noteTarget,unit:CU.unit,text,createdAt:new Date().toISOString(),by:CU.username});
+        NOTES[noteTarget]={text,docId:ref.id};
+      }
+      closeNoteModal();renderMembers();toast('Note saved','ok');
+    }catch(e){toast('Failed to save note','err');console.error(e);}
+  };
+
+  // ── MEMBER SCREEN ──
+  async function showMember(){
+    show('sMember');
+    set('memNavUnit',CU.unit); set('memNavName',CU.name);
+    set('memHeroName','Hi, '+CU.name.split(' ')[0]+'!');
+    set('memHeroUnit',CU.unit); set('memUnitBadge',CU.unit);
+    setLoading(false);
+    loadMemberAttendance();
+  }
+
+  async function loadMemberAttendance(){
+    try{
+      const snap=await getDocs(query(collection(db,'records'),where('unit','==',CU.unit),orderBy('date','desc')));
+      const records=snap.docs.map(d=>d.data());
+      if(!records.length){
+        set('memAttHistory','<div class="empty">No attendance records yet for your unit.</div>');
+        return;
+      }
+
+      // Compute personal stats
+      const total=records.length;
+      const present=records.filter(r=>r.presentNames&&r.presentNames.includes(CU.name)).length;
+      const rate=total?Math.round(present/total*100):0;
+
+      set('memStatSessions',total);
+      set('memStatPresent',present);
+      set('memStatRate',total?rate+'%':'—');
+      set('memAttBadge',total+' session'+(total===1?'':'s'));
+
+      // Color-code rate badge on stat
+      const rateEl=document.getElementById('memStatRate');
+      if(rateEl) rateEl.style.color=rate>=75?'var(--green)':rate>=50?'var(--amber)':'var(--red)';
+
+      // Build attendance rows grouped by service type
+      const html=records.map(r=>{
+        const wasPresent=r.presentNames&&r.presentNames.includes(CU.name);
+        const bc=wasPresent?'g':'r';
+        return `<div class="att-row">
+          <div>
+            <div style="font-size:13px;font-weight:600;color:var(--grey-5)">${fmtShort(r.date)}</div>
+            <div style="font-size:11px;color:var(--grey-3);margin-top:2px">${svcLbl(r.service)}</div>
+          </div>
+          <span class="badge ${bc}">${wasPresent?'Present':'Absent'}</span>
+        </div>`;
+      }).join('');
+      set('memAttHistory',html);
+    }catch(e){console.error(e);set('memAttHistory','<div class="empty">Could not load records.</div>');}
+  }
+
+  // ── ADMIN ──
+  async function showAdmin(){
+    show('sAdmin');
+    set('aNavName',CU.name);
+    setLoading(false);
+    await renderOverview();
+    renderHistory('all');
+    renderSetup();
+    try{
+      const snap=await getDocs(collection(db,'users'));
+      const units=[...new Set(snap.docs.map(d=>d.data().unit))].sort();
+      const sel=document.getElementById('repUnit');
+      sel.innerHTML='<option value="all">All Units (Church-wide)</option>'+units.map(u=>`<option value="${esc(u)}">${esc(u)}</option>`).join('');
+    }catch(e){console.error(e);}
+  }
+
+  window.renderOverview=async function(){
+    const svc=document.getElementById('aSvc')?document.getElementById('aSvc').value:'s1';
+    try{
+      const [usersSnap,recordsSnap]=await Promise.all([
+        getDocs(collection(db,'users')),
+        getDocs(query(collection(db,'records'),orderBy('date','desc')))
+      ]);
+      const users=usersSnap.docs.map(d=>d.data()).filter(u=>u.role==='leader');
+      const records=recordsSnap.docs.map(d=>d.data());
+      const units=[...new Set(users.map(u=>u.unit))];
+      const latest={};
+      records.filter(r=>r.service===svc).slice().reverse().forEach(r=>{latest[r.unit]=r;});
+      const recs=Object.values(latest);
+      const tp=recs.reduce((a,r)=>a+r.present,0);
+      const tt=recs.reduce((a,r)=>a+r.total,0);
+      const avg=recs.length?Math.round(recs.reduce((a,r)=>a+r.pct,0)/recs.length):0;
+      set('oSum',`
+        <div class="sum-mini"><div class="sum-val">${recs.length}</div><div class="sum-lbl">Reported</div></div>
+        <div class="sum-mini"><div class="sum-val">${units.length-recs.length}</div><div class="sum-lbl">Pending</div></div>
+        <div class="sum-mini"><div class="sum-val">${tp}</div><div class="sum-lbl">Present</div></div>
+        <div class="sum-mini"><div class="sum-val">${tt-tp}</div><div class="sum-lbl">Absent</div></div>
+        <div class="sum-mini"><div class="sum-val">${tt}</div><div class="sum-lbl">Total</div></div>
+        <div class="sum-mini"><div class="sum-val">${avg}%</div><div class="sum-lbl">Avg</div></div>
+      `);
+      const userMap={};
+      usersSnap.docs.forEach(d=>{const ud=d.data();if(ud.unit)userMap[ud.unit]=ud.unitType||'Hall';});
+      const typeOrder=['Hall','Hostel','Department'];
+      const typeLabels={Hall:'🏛 Halls',Hostel:'🏠 Hostels',Department:'📚 Departments'};
+      let html='';
+      typeOrder.forEach(type=>{
+        const typeUnits=units.filter(u=>(userMap[u]||'Hall')===type);
+        if(!typeUnits.length)return;
+        html+=`<div class="unit-type-hd">${typeLabels[type]}</div>`;
+        typeUnits.forEach(u=>{
+          const r=latest[u];
+          if(!r){html+=`<div class="scard"><div class="scard-hd"><div class="scard-title">${esc(u)}</div><span class="badge p">Pending</span></div><div style="font-size:12px;color:var(--grey-3)">No attendance submitted for this service</div></div>`;return;}
+          const bc=r.pct>=75?'g':r.pct>=50?'a':'r';
+          html+=`<div class="scard">
+            <div class="scard-hd"><div class="scard-title">${esc(u)}</div><span class="badge ${bc}">${r.pct}%</span></div>
+            <div class="plabels"><span>${r.present} present</span><span>${r.total} total</span></div>
+            <div class="pbar"><div class="pfill ${bc}" style="width:${r.pct}%"></div></div>
+            <div style="font-size:11px;color:var(--grey-3);margin-top:6px">Submitted ${rel(r.date)} · by ${esc(r.by)}</div>
+          </div>`;
+        });
+      });
+      set('oCards',html||'<div class="empty">No units registered yet.</div>');
+    }catch(e){console.error(e);toast('Failed to load overview','err');}
+  };
+
+  window.renderUnitTab=async function(type){
+    const containerId='hCards'+type;
+    const el=document.getElementById(containerId);
+    if(!el)return;
+    el.innerHTML='<div class="empty">Loading…</div>';
+    try{
+      const [usersSnap,recordsSnap,membersSnap]=await Promise.all([
+        getDocs(collection(db,'users')),
+        getDocs(query(collection(db,'records'),orderBy('date','desc'))),
+        getDocs(collection(db,'members'))
+      ]);
+      const users=usersSnap.docs.map(d=>d.data()).filter(u=>u.role==='leader');
+      const records=recordsSnap.docs.map(d=>d.data());
+      const members=membersSnap.docs.map(d=>d.data());
+      const typeUnits=[...new Set(users.filter(u=>(u.unitType||'Hall')===type).map(u=>u.unit))].sort();
+      if(!typeUnits.length){el.innerHTML=`<div class="empty">No ${type.toLowerCase()}s registered yet.</div>`;return;}
+      el.innerHTML=typeUnits.map(u=>{
+        const recs=records.filter(r=>r.unit===u).slice(0,5);
+        const mCnt=members.filter(m=>m.unit===u).length;
+        return `<div class="scard">
+          <div class="scard-hd"><div class="scard-title">${esc(u)}</div><span style="font-size:11px;color:var(--grey-3)">${mCnt} members</span></div>
+          ${recs.length?recs.map(r=>`
+            <div style="margin-bottom:9px">
+              <div class="plabels"><span>${svcLbl(r.service)} · ${fmtShort(r.date)}</span><span>${r.present}/${r.total} · ${r.pct}%</span></div>
+              <div class="pbar"><div class="pfill ${r.pct>=75?'g':r.pct>=50?'a':'r'}" style="width:${r.pct}%"></div></div>
+            </div>`).join(''):'<div style="font-size:12px;color:var(--grey-3)">No records yet</div>'}
+        </div>`;
+      }).join('');
+    }catch(e){el.innerHTML='<div class="empty">Failed to load.</div>';console.error(e);}
+  };
+
+  let hFilter='all';
+  window.renderHistory=async function(f){
+    hFilter=f||hFilter;
+    try{
+      const [usersSnap,recordsSnap]=await Promise.all([
+        getDocs(collection(db,'users')),
+        getDocs(query(collection(db,'records'),orderBy('date','desc')))
+      ]);
+      const users=usersSnap.docs.map(d=>d.data()).filter(u=>u.role==='leader');
+      const records=recordsSnap.docs.map(d=>d.data());
+      const typeOrder=['Hall','Hostel','Department'];
+      const typeIcons={Hall:'🏛',Hostel:'🏠',Department:'📚'};
+      let chipsHtml=`<button class="chip ${hFilter==='all'?'on':''}" onclick="renderHistory('all')">All Units</button>`;
+      typeOrder.forEach(type=>{
+        const typeUnits=[...new Set(users.filter(u=>(u.unitType||'Hall')===type).map(u=>u.unit))].sort();
+        typeUnits.forEach(u=>{
+          const safe=u.replace(/'/g,"\\'");
+          chipsHtml+=`<button class="chip ${hFilter===u?'on':''}" onclick="renderHistory('${safe}')">${typeIcons[type]} ${esc(u)}</button>`;
+        });
+      });
+      set('hChips',chipsHtml);
+      const recs=hFilter==='all'?records:records.filter(r=>r.unit===hFilter);
+      set('hBody',recs.length?recs.map(r=>`<tr>
+        <td>${fmtShort(r.date)}</td><td>${esc(r.unit)}</td><td>${svcLbl(r.service)}</td>
+        <td><strong>${r.present}</strong></td><td>${r.total}</td>
+        <td><span class="badge ${r.pct>=75?'g':r.pct>=50?'a':'r'}">${r.pct}%</span></td>
+      </tr>`).join(''):`<tr><td colspan="6" style="text-align:center;color:var(--grey-3);padding:20px">No records yet</td></tr>`);
+    }catch(e){console.error(e);}
+  };
+
+  window.renderReports=async function(){
+    const unitFilter=document.getElementById('repUnit').value;
+    const svcFilter=document.getElementById('repSvc').value;
+    const out=document.getElementById('repOut');
+    out.innerHTML='<div class="empty">Loading…</div>';
+    try{
+      const recordsSnap=await getDocs(query(collection(db,'records'),orderBy('date','asc')));
+      let records=recordsSnap.docs.map(d=>d.data());
+      if(unitFilter!=='all')records=records.filter(r=>r.unit===unitFilter);
+      if(svcFilter!=='all')records=records.filter(r=>r.service===svcFilter);
+      if(!records.length){out.innerHTML='<div class="empty">No records match the selected filters.</div>';return;}
+      const units=[...new Set(records.map(r=>r.unit))].sort();
+      const tp=records.reduce((a,r)=>a+r.present,0);
+      const tt=records.reduce((a,r)=>a+r.total,0);
+      const ts=records.length;
+      const avg=ts?Math.round(records.reduce((a,r)=>a+r.pct,0)/ts):0;
+      const best=records.reduce((b,r)=>r.pct>b.pct?r:b,records[0]);
+      const worst=records.reduce((w,r)=>r.pct<w.pct?r:w,records[0]);
+      let html=`<div class="scard">
+        <div class="scard-hd"><div class="scard-title">${unitFilter==='all'?'Church-wide Summary':esc(unitFilter)+' Summary'}</div></div>
+        <div class="sum-grid" style="margin-bottom:10px">
+          <div class="sum-mini"><div class="sum-val">${ts}</div><div class="sum-lbl">Sessions</div></div>
+          <div class="sum-mini"><div class="sum-val">${tp}</div><div class="sum-lbl">Total Present</div></div>
+          <div class="sum-mini"><div class="sum-val">${avg}%</div><div class="sum-lbl">Avg Rate</div></div>
+        </div>
+        <div class="rep-row"><span class="rep-key">Best session</span><span class="rep-val">${esc(best.unit)} · ${fmtShort(best.date)} · ${best.pct}%</span></div>
+        <div class="rep-row"><span class="rep-key">Lowest session</span><span class="rep-val">${esc(worst.unit)} · ${fmtShort(worst.date)} · ${worst.pct}%</span></div>
+        <div class="rep-row"><span class="rep-key">Total logged</span><span class="rep-val">${tp} / ${tt}</span></div>
+      </div>`;
+      if(unitFilter==='all'&&units.length>1){
+        html+=`<div style="font-family:'Montserrat',sans-serif;font-size:12px;font-weight:800;margin:16px 0 10px">Per-Unit Breakdown</div>`;
+        units.forEach(u=>{
+          const ur=records.filter(r=>r.unit===u);
+          const uAvg=ur.length?Math.round(ur.reduce((a,r)=>a+r.pct,0)/ur.length):0;
+          const uPresent=ur.reduce((a,r)=>a+r.present,0),uTotal=ur.reduce((a,r)=>a+r.total,0);
+          const bc=uAvg>=75?'g':uAvg>=50?'a':'r';
+          html+=`<div class="scard" style="margin-bottom:10px">
+            <div class="scard-hd"><div class="scard-title">${esc(u)}</div><span class="badge ${bc}">${uAvg}% avg</span></div>
+            <div class="rep-row"><span class="rep-key">Sessions</span><span class="rep-val">${ur.length}</span></div>
+            <div class="rep-row"><span class="rep-key">Attendance</span><span class="rep-val">${uPresent} / ${uTotal}</span></div>
+            <div class="pbar" style="margin-top:8px"><div class="pfill ${bc}" style="width:${uAvg}%"></div></div>
+          </div>`;
+        });
+      }
+      if(unitFilter!=='all'){
+        const sorted=[...records].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,30);
+        html+=`<div class="scard" style="overflow-x:auto">
+          <div class="scard-hd"><div class="scard-title">Session History</div></div>
+          <table class="htbl">
+            <thead><tr><th>Date</th><th>Service</th><th>Present</th><th>Total</th><th>%</th></tr></thead>
+            <tbody>${sorted.map(r=>`<tr><td>${fmtShort(r.date)}</td><td>${svcLbl(r.service)}</td><td><strong>${r.present}</strong></td><td>${r.total}</td><td><span class="badge ${r.pct>=75?'g':r.pct>=50?'a':'r'}">${r.pct}%</span></td></tr>`).join('')}</tbody>
+          </table>
+        </div>`;
+      }
+      out.innerHTML=html;
+    }catch(e){out.innerHTML='<div class="empty">Failed to load reports.</div>';console.error(e);}
+  };
+
+  // ── ADMIN PDF REPORT ──
+  window.adminPdf = async function(){
+    const unitFilter=document.getElementById('repUnit').value;
+    const svcFilter=document.getElementById('repSvc').value;
+    try{
+      const recordsSnap=await getDocs(query(collection(db,'records'),orderBy('date','desc')));
+      let records=recordsSnap.docs.map(d=>d.data());
+      if(unitFilter!=='all')records=records.filter(r=>r.unit===unitFilter);
+      if(svcFilter!=='all')records=records.filter(r=>r.service===svcFilter);
+      if(!records.length){toast('No records to export','err');return;}
+      const ts=records.length;
+      const tp=records.reduce((a,r)=>a+r.present,0);
+      const tt=records.reduce((a,r)=>a+r.total,0);
+      const avg=ts?Math.round(records.reduce((a,r)=>a+r.pct,0)/ts):0;
+      const units=[...new Set(records.map(r=>r.unit))].sort();
+
+      // Build sections — one per unit if church-wide, else just the records
+      let sections=[];
+      if(unitFilter==='all'&&units.length>1){
+        units.forEach(u=>{
+          const ur=records.filter(r=>r.unit===u);
+          const uAvg=ur.length?Math.round(ur.reduce((a,r)=>a+r.pct,0)/ur.length):0;
+          sections.push({
+            heading:`${u} (${uAvg}% avg)`,
+            rows:ur.map(r=>[fmtShort(r.date),svcLbl(r.service),r.present,r.total,r.pct+'%']),
+            cls:''
+          });
+        });
+      }else{
+        sections=[{
+          heading:unitFilter==='all'?'All Units':unitFilter,
+          rows:records.map(r=>[fmtShort(r.date),esc(r.unit),svcLbl(r.service),r.present,r.total,r.pct+'%']),
+          cls:''
+        }];
+      }
+
+      const html=buildPrintHtml({
+        title:unitFilter==='all'?'Church-wide Attendance Report':`Attendance Report — ${unitFilter}`,
+        subtitle:`${svcFilter==='all'?'All services':svcLbl(svcFilter)} · Generated ${fmtFull(new Date())}`,
+        stats:[
+          {val:ts,lbl:'Sessions'},
+          {val:tp,lbl:'Total Present'},
+          {val:tt,lbl:'Total Slots'},
+          {val:avg+'%',lbl:'Avg Rate'}
+        ],
+        sections,
+        cols:unitFilter==='all'?['Date','Unit','Service','Present','Total','Rate']:['Date','Service','Present','Total','Rate'],
+        by:`Admin Report · Exported by ${CU.name}`
+      });
+      triggerPrint(html);
+    }catch(e){toast('Failed to generate report','err');console.error(e);}
+  };
+
+  // ── PDF BUILDER ──
+  function buildPrintHtml({title,subtitle,stats,sections,cols,by}){
+    const statsHtml=stats.map(s=>`<div class="print-stat"><div class="print-stat-val">${s.val}</div><div class="print-stat-lbl">${s.lbl}</div></div>`).join('');
+    const sectionsHtml=sections.map(sec=>{
+      const rowsHtml=sec.rows.map(row=>`<tr>${row.map((cell,i)=>`<td class="${i===row.length-1?sec.cls:''}">${cell}</td>`).join('')}</tr>`).join('');
+      return `<div class="print-section-hd">${sec.heading}</div>
+        <table class="print-table">
+          <thead><tr>${cols.map(c=>`<th>${c}</th>`).join('')}</tr></thead>
+          <tbody>${rowsHtml}</tbody>
+        </table>`;
+    }).join('');
+    return `
+      <div class="print-logo">CCF</div>
+      <div class="print-mantra">Light to Our Generation</div>
+      <div class="print-title">${title}</div>
+      <div class="print-meta">${subtitle}</div>
+      <hr class="print-divider"/>
+      <div class="print-stats">${statsHtml}</div>
+      ${sectionsHtml}
+      <div class="print-footer">${by} · CCF Attendance System</div>
+    `;
+  }
+
+  function triggerPrint(html){
+    const el=document.getElementById('printArea');
+    el.innerHTML=html;
+    el.style.display='block';
+    setTimeout(()=>{
+      window.print();
+      setTimeout(()=>{ el.style.display='none'; el.innerHTML=''; },500);
+    },100);
+  }
+
+  window.renderSetup=async function(){
+    try{
+      const snap=await getDocs(collection(db,'users'));
+      const users=snap.docs.map(d=>({...d.data(),id:d.id}));
+      const leaders=users.filter(u=>u.role==='leader');
+      const members=users.filter(u=>u.role==='member');
+      let html='';
+      if(leaders.length){
+        html+='<div style="font-size:11px;font-weight:700;color:var(--grey-3);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Leaders</div>';
+        html+=leaders.map(u=>`<div class="urow"><div class="uinfo"><div class="uname">${esc(u.name)}</div><div class="umeta">${esc(u.username)} · ${esc(u.unitType||'Hall')}: ${esc(u.unit)}</div></div><span class="rbadge leader">Leader</span></div>`).join('');
+      }
+      if(members.length){
+        html+='<div style="font-size:11px;font-weight:700;color:var(--grey-3);text-transform:uppercase;letter-spacing:1px;margin:14px 0 8px">Members</div>';
+        html+=members.map(u=>`<div class="urow"><div class="uinfo"><div class="uname">${esc(u.name)}</div><div class="umeta">${esc(u.username)} · ${esc(u.unit)}</div></div><span class="rbadge member">Member</span></div>`).join('');
+      }
+      set('uList',html||'<div style="font-size:12px;color:var(--grey-3)">No users yet.</div>');
+      document.getElementById('delSel').innerHTML=
+        `<option value="">— Select user —</option>`+
+        users.map(u=>`<option value="${u.id}">${esc(u.name)} (${esc(u.role)}: ${esc(u.unit)})</option>`).join('');
+    }catch(e){console.error(e);}
+  };
+
+  window.addUnit=async function(){
+    const unitType=document.getElementById('newUnitType').value;
+    const unitName=document.getElementById('newUnitName').value.trim();
+    const leaderName=document.getElementById('newUnitLeaderName').value.trim();
+    const leaderUser=document.getElementById('newUnitLeaderUser').value.trim();
+    const leaderPass=document.getElementById('newUnitLeaderPass').value.trim();
+    if(!unitName||!leaderName||!leaderUser||!leaderPass){toast('Fill all unit fields','err');return;}
+    try{
+      const adminDoc=await getDoc(doc(db,'config','admin'));
+      if(adminDoc.exists()&&adminDoc.data().username===leaderUser){toast('Username taken','err');return;}
+      const snap=await getDocs(query(collection(db,'users'),where('username','==',leaderUser)));
+      if(!snap.empty){toast('Username already taken','err');return;}
+      await addDoc(collection(db,'users'),{username:leaderUser,password:leaderPass,name:leaderName,unit:unitName,unitType,role:'leader'});
+      ['newUnitName','newUnitLeaderName','newUnitLeaderUser','newUnitLeaderPass'].forEach(id=>document.getElementById(id).value='');
+      toast('Unit and leader created!','ok');renderSetup();
+    }catch(e){toast('Failed to add unit','err');console.error(e);}
+  };
+
+  window.changePwd=async function(){
+    const c=v('pwCur'),n=v('pwNew'),cf=v('pwCon');
+    try{
+      const adminDoc=await getDoc(doc(db,'config','admin'));
+      if(!adminDoc.exists()||adminDoc.data().password!==c){toast('Current password incorrect','err');return;}
+      if(!n){toast('New password cannot be empty','err');return;}
+      if(n!==cf){toast('Passwords do not match','err');return;}
+      await updateDoc(doc(db,'config','admin'),{password:n});
+      ['pwCur','pwNew','pwCon'].forEach(id=>document.getElementById(id).value='');
+      toast('Password updated','ok');
+    }catch(e){toast('Update failed','err');console.error(e);}
+  };
+
+  window.removeUser=async function(){
+    const id=document.getElementById('delSel').value;
+    if(!id){toast('Select a user first','err');return;}
+    try{
+      const snap=await getDoc(doc(db,'users',id));
+      const u=snap.data();
+      if(!u||!confirm(`Remove ${u.name} (${u.unit})?`))return;
+      await deleteDoc(doc(db,'users',id));
+      renderSetup();toast(u.name+' removed');
+    }catch(e){toast('Failed to remove user','err');console.error(e);}
+  };
+
+  window.switchTab=function(name){
+    const all=['Overview','Halls','Hostels','Departments','Reports','History','Setup'];
+    document.querySelectorAll('#adminTabs .tab').forEach((b,i)=>b.classList.toggle('on',all[i]===name));
+    document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
+    document.getElementById('p'+name).classList.add('on');
+    if(name==='Overview')    renderOverview();
+    if(name==='Halls')       renderUnitTab('Hall');
+    if(name==='Hostels')     renderUnitTab('Hostel');
+    if(name==='Departments') renderUnitTab('Department');
+    if(name==='Reports')     renderReports();
+    if(name==='History')     renderHistory(hFilter);
+    if(name==='Setup')       renderSetup();
+  };
+
+  document.addEventListener('keydown',e=>{
+    if(e.key!=='Enter')return;
+    const active=document.querySelector('.screen.active');
+    if(active?.id==='sLogin') doLogin();
+    if(active?.id==='sRegister') doRegister();
+  });
+
+  async function boot(){
+    try{
+      const adminRef=doc(db,'config','admin');
+      const adminDoc=await getDoc(adminRef);
+      if(!adminDoc.exists()){
+        await setDoc(adminRef,{username:'ccfadmin',password:'Admin#CCF!9',name:'CCF Admin'});
+      }
+      restore();
+    }catch(e){
+      console.error(e);setLoading(false);show('sLogin');
+      toast('Could not connect to database','err');
+    }
+  }
+  window.addEventListener('load',boot);
+</script>
+</body>
+</html>
